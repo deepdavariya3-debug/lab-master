@@ -1,41 +1,43 @@
-
 import streamlit as st
 import pandas as pd
 import plotly.express as px
 
-# 1. Page Configuration
+# 1. Page Configuration (Forces responsive layout)
 st.set_page_config(page_title="Lab Master", layout="wide", page_icon="🔬")
+
+# Custom spacing to look cleaner on mobile screens
+st.markdown("""
+    <style>
+    .block-container { padding-top: 2rem; padding-bottom: 2rem; }
+    </style>
+""", unsafe_allow_html=True)
+
 st.title("🔬 Lab Master")
 st.markdown("**By Deep Patel** | *B.Sc. Physics Lab Companion*")
 st.divider()
 
-# 2. Create Tabs for organization
-tab1, tab2, tab3 = st.tabs(["📊 Data & Graphing", "🔄 Unit Converter", "⚛️ Physics Constants"])
+# 2. Create Tabs
+tab1, tab2, tab3 = st.tabs(["📊 Data & Graph", "🔄 Unit Converter", "⚛️ Physics Constants"])
 
 # --- TAB 1: GRAPHING ---
 with tab1:
     st.header("Experimental Data Plotter")
+    # Streamlit automatically stacks these on top of each other on mobile phones!
     col1, col2 = st.columns([1, 2])
     
     with col1:
         st.subheader("Enter Readings")
         st.info("Enter up to 20 readings. Empty rows will be ignored.")
-        # Create a dataframe with 20 empty rows
         initial_data = pd.DataFrame({"X-Axis": [None]*20, "Y-Axis": [None]*20})
-        
-        # Interactive data editor
+        # use_container_width=True ensures it never bleeds off a phone screen
         edited_df = st.data_editor(initial_data, num_rows="fixed", use_container_width=True)
         
     with col2:
         st.subheader("Live Graph")
-        # Clean data: drop rows that don't have both X and Y values
         clean_df = edited_df.dropna(subset=["X-Axis", "Y-Axis"])
         
         if not clean_df.empty:
-            # Convert inputs to float just in case
             clean_df = clean_df.astype(float)
-            
-            # Plot using Plotly for a smooth, professional look
             fig = px.scatter(clean_df, x="X-Axis", y="Y-Axis", 
                              title="X vs Y Readings",
                              trendline="ols") if len(clean_df) > 1 else px.scatter(clean_df, x="X-Axis", y="Y-Axis")
@@ -53,13 +55,24 @@ with tab2:
     with col3:
         st.subheader("Length")
         length_val = st.number_input("Enter value:", value=1.0, key="len_val")
-        len_from = st.selectbox("From:", ["Meters", "Centimeters", "Millimeters", "Kilometers"], key="len_from")
-        len_to = st.selectbox("To:", ["Meters", "Centimeters", "Millimeters", "Kilometers"], key="len_to")
         
-        # Simple conversion logic using meters as base
-        len_factors = {"Meters": 1, "Centimeters": 0.01, "Millimeters": 0.001, "Kilometers": 1000}
+        # New Expanded Scale
+        length_units = ["Nanometers", "Micrometers", "Millimeters", "Centimeters", "Meters", "Kilometers"]
+        len_from = st.selectbox("From:", length_units, index=4, key="len_from")
+        len_to = st.selectbox("To:", length_units, index=3, key="len_to")
+        
+        # Conversion logic using scientific notation
+        len_factors = {
+            "Nanometers": 1e-9, 
+            "Micrometers": 1e-6, 
+            "Millimeters": 1e-3, 
+            "Centimeters": 1e-2, 
+            "Meters": 1, 
+            "Kilometers": 1000
+        }
         result = (length_val * len_factors[len_from]) / len_factors[len_to]
-        st.success(f"**Result:** {result} {len_to}")
+        # The :g formats it cleanly so huge decimals don't break the mobile view
+        st.success(f"**Result:** {result:g} {len_to}")
 
     with col4:
         st.subheader("Mass")
@@ -69,7 +82,7 @@ with tab2:
         
         mass_factors = {"Kilograms": 1, "Grams": 0.001, "Milligrams": 0.000001}
         m_result = (mass_val * mass_factors[mass_from]) / mass_factors[mass_to]
-        st.success(f"**Result:** {m_result} {mass_to}")
+        st.success(f"**Result:** {m_result:g} {mass_to}")
 
 # --- TAB 3: CONSTANTS ---
 with tab3:
@@ -82,21 +95,34 @@ with tab3:
             "Elementary Charge (e)", 
             "Electron Mass (m_e)", 
             "Proton Mass (m_p)",
+            "Neutron Mass (m_n)",
             "Boltzmann Constant (k)",
-            "Permittivity of Free Space (ε₀)"
+            "Permittivity of Free Space (ε₀)",
+            "Permeability of Free Space (μ₀)",
+            "Avogadro's Number (N_A)",
+            "Ideal Gas Constant (R)",
+            "Stefan-Boltzmann Constant (σ)",
+            "Rydberg Constant (R_∞)"
         ],
         "Value": [
-            "299,792,458", 
-            "6.62607015 × 10⁻³⁴", 
-            "6.67430 × 10⁻¹¹", 
-            "1.602176634 × 10⁻¹⁹", 
-            "9.1093837 × 10⁻³¹", 
-            "1.67262192 × 10⁻²⁷",
-            "1.380649 × 10⁻²³",
-            "8.85418781 × 10⁻¹²"
+            "2.9979 × 10⁸", 
+            "6.626 × 10⁻³⁴", 
+            "6.674 × 10⁻¹¹", 
+            "1.602 × 10⁻¹⁹", 
+            "9.109 × 10⁻³¹", 
+            "1.672 × 10⁻²⁷",
+            "1.674 × 10⁻²⁷",
+            "1.380 × 10⁻²³",
+            "8.854 × 10⁻¹²",
+            "1.256 × 10⁻⁶",
+            "6.022 × 10²³",
+            "8.314",
+            "5.670 × 10⁻⁸",
+            "1.097 × 10⁷"
         ],
         "Unit": [
-            "m/s", "J·s", "m³/(kg·s²)", "C", "kg", "kg", "J/K", "F/m"
+            "m/s", "J·s", "N·m²/kg²", "C", "kg", "kg", "kg", "J/K", "F/m", "N/A²", "mol⁻¹", "J/(mol·K)", "W/(m²·K⁴)", "m⁻¹"
         ]
     }
-    st.table(pd.DataFrame(constants_data))
+    # Changed from st.table to st.dataframe so mobile users can swipe horizontally!
+    st.dataframe(pd.DataFrame(constants_data), use_container_width=True, hide_index=True)
