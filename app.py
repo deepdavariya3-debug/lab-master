@@ -5,7 +5,6 @@ import plotly.express as px
 # 1. Page Configuration
 st.set_page_config(page_title="Lab Master", layout="wide", page_icon="🔬")
 
-# Custom spacing to look cleaner on mobile screens
 st.markdown("""
     <style>
     .block-container { padding-top: 2rem; padding-bottom: 2rem; }
@@ -21,13 +20,21 @@ tab1, tab2, tab3 = st.tabs(["📊 Data & Graph", "🔄 Unit Converter", "⚛️ 
 
 # --- TAB 1: GRAPHING ---
 with tab1:
-    st.header("Experimental Data Plotter")
+    st.header("Premium Data Plotter")
     
-    # NEW: Let the user choose the type of physics graph
-    st.write("##### ⚙️ Graph Settings")
+    # Custom Axis Labels for a professional look
+    col_x, col_y = st.columns(2)
+    x_label = col_x.text_input("X-Axis Name (e.g., Voltage (V))", "X-Axis")
+    y_label = col_y.text_input("Y-Axis Name (e.g., Current (mA))", "Y-Axis")
+    
+    st.write("##### ⚙️ Curve Rendering")
     graph_type = st.radio(
-        "Select the curve fit for your practical:", 
-        ["Linear Fit (Straight line of best fit)", "Smooth Curve (Locally weighted fit)", "Connect Points (Raw data)"],
+        "Select mathematical treatment:", 
+        [
+            "Smooth Spline (Perfect curve through all points)", 
+            "Linear Fit (Straight line of best fit / OLS)", 
+            "Trend Curve (Weighted statistical curve / LOWESS)"
+        ],
         horizontal=True
     )
     
@@ -35,44 +42,67 @@ with tab1:
     col1, col2 = st.columns([1, 2])
     
     with col1:
-        st.subheader("Enter Readings")
-        st.info("Enter up to 20 readings. Empty rows will be ignored.")
-        initial_data = pd.DataFrame({"X-Axis": [None]*20, "Y-Axis": [None]*20})
+        st.subheader("Experimental Data")
+        st.info("Enter readings. Empty rows are ignored.")
+        initial_data = pd.DataFrame({x_label: [None]*20, y_label: [None]*20})
         edited_df = st.data_editor(initial_data, num_rows="fixed", use_container_width=True)
         
     with col2:
         st.subheader("Live Graph")
-        clean_df = edited_df.dropna(subset=["X-Axis", "Y-Axis"])
+        clean_df = edited_df.dropna(subset=[x_label, y_label])
         
         if not clean_df.empty:
             clean_df = clean_df.astype(float)
+            clean_df = clean_df.sort_values(by=x_label)
             
-            # Sort values by X-axis so "Connect Points" doesn't draw chaotic spaghetti lines
-            clean_df = clean_df.sort_values(by="X-Axis")
-            
+            # --- GRAPH GENERATION ---
             if len(clean_df) > 1:
-                if graph_type == "Linear Fit (Straight line of best fit)":
-                    # Draws dots + a straight mathematical line of best fit (OLS)
-                    fig = px.scatter(clean_df, x="X-Axis", y="Y-Axis", title="X vs Y Readings", trendline="ols")
-                    fig.update_traces(mode='markers', marker=dict(size=8))
-                    
-                elif graph_type == "Smooth Curve (Locally weighted fit)":
-                    # Draws dots + a smooth, curved trendline (LOWESS)
-                    fig = px.scatter(clean_df, x="X-Axis", y="Y-Axis", title="X vs Y Readings", trendline="lowess")
-                    fig.update_traces(mode='markers', marker=dict(size=8))
-                    
+                if graph_type == "Linear Fit (Straight line of best fit / OLS)":
+                    fig = px.scatter(clean_df, x=x_label, y=y_label, trendline="ols")
+                elif graph_type == "Trend Curve (Weighted statistical curve / LOWESS)":
+                    fig = px.scatter(clean_df, x=x_label, y=y_label, trendline="lowess")
                 else:
-                    # Just connects the raw data points directly
-                    fig = px.scatter(clean_df, x="X-Axis", y="Y-Axis", title="X vs Y Readings")
-                    fig.update_traces(mode='lines+markers', marker=dict(size=8))
+                    # The Premium Spline Curve
+                    fig = px.line(clean_df, x=x_label, y=y_label)
+                    fig.update_traces(line_shape='spline', mode='lines+markers')
             else:
-                # If only 1 point is entered, just show the point
-                fig = px.scatter(clean_df, x="X-Axis", y="Y-Axis", title="X vs Y Readings")
-                fig.update_traces(mode='markers', marker=dict(size=8))
-                
+                fig = px.scatter(clean_df, x=x_label, y=y_label)
+
+            # --- PREMIUM STYLING ENGINE ---
+            # 1. Layout & Grid
+            fig.update_layout(
+                title=dict(text=f"<b>{y_label} vs {x_label}</b>", font=dict(size=22, color="#1E293B")),
+                plot_bgcolor="white",
+                paper_bgcolor="white",
+                font=dict(family="Arial, sans-serif", size=14, color="#475569"),
+                xaxis=dict(showgrid=True, gridcolor="#F1F5F9", zeroline=True, zerolinecolor="#CBD5E1", zerolinewidth=2),
+                yaxis=dict(showgrid=True, gridcolor="#F1F5F9", zeroline=True, zerolinecolor="#CBD5E1", zerolinewidth=2),
+                hovermode="x unified",
+                margin=dict(l=40, r=40, t=60, b=40)
+            )
+            
+            # 2. Style the Data Points (Deep Blue with White Border)
+            fig.update_traces(
+                marker=dict(size=14, color='#2563EB', line=dict(width=2.5, color='white')),
+                selector=dict(mode='markers')
+            )
+            
+            # 3. Style the Mathematical Curves (Vibrant Red/Pink)
+            fig.update_traces(
+                line=dict(color='#E11D48', width=3.5),
+                selector=dict(mode='lines')
+            )
+            
+            # 4. Style the Spline combination (Lines + Markers)
+            fig.update_traces(
+                marker=dict(size=14, color='#2563EB', line=dict(width=2.5, color='white')),
+                line=dict(color='#E11D48', width=3.5),
+                selector=dict(mode='lines+markers')
+            )
+            
             st.plotly_chart(fig, use_container_width=True)
         else:
-            st.warning("Enter at least one valid X and Y reading to see the graph.")
+            st.warning("Enter at least one valid reading to render the graph.")
 
 # --- TAB 2: UNIT CONVERTER ---
 with tab2:
@@ -82,7 +112,6 @@ with tab2:
     with col3:
         st.subheader("Length")
         length_val = st.number_input("Enter value:", value=1.0, key="len_val")
-        
         length_units = ["Nanometers", "Micrometers", "Millimeters", "Centimeters", "Meters", "Kilometers"]
         len_from = st.selectbox("From:", length_units, index=4, key="len_from")
         len_to = st.selectbox("To:", length_units, index=3, key="len_to")
